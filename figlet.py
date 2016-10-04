@@ -8,10 +8,28 @@ BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(BASE_PATH)
 
 
+def add_comment(text, prefix, padding):
+    reversed_prefix = prefix[::-1]
+    max_width = get_max_line_length(text)
+    horizontal_border = prefix + ((max_width + 2*padding)*prefix[-1]) + reversed_prefix
+
+    # First row
+    result = horizontal_border + '\n'
+    # Content
+    for line in text.split('\n')[:-1]:
+        result += prefix+ padding*' ' + line + (max_width-len(line)+padding)*' ' + reversed_prefix + '\n'
+    # Last row
+    result += horizontal_border + prefix[0]
+
+    return result
+
+
 def figlet_text(text):
     import pyfiglet
     settings = sublime.load_settings("Preferences.sublime-settings")
     font = settings.get('figlet_font', 'standard')
+    prefix = settings.get('figlet_comment_prefix', 'None')
+    padding = settings.get('figlet_comment_padding', 4)
 
     width = get_width()
 
@@ -20,6 +38,9 @@ def figlet_text(text):
     # Strip trailing whitespace, because why not?
     if settings.get('figlet_no_trailing_spaces', True):
         result = '\n'.join((line.rstrip() for line in result.split('\n')))
+
+    if prefix != 'None':
+        result = add_comment(result, prefix, padding)
 
     return result[:len(result) - 1]
 
@@ -37,6 +58,10 @@ def get_width():
     return width
 
 
+def get_max_line_length(text):
+    return max(len(line) for line in text.split('\n'))
+
+
 class FigletSelectFontCommand(sublime_plugin.WindowCommand):
     def run(self):
         import pyfiglet
@@ -46,6 +71,19 @@ class FigletSelectFontCommand(sublime_plugin.WindowCommand):
     def on_done(self, index):
         settings = sublime.load_settings("Preferences.sublime-settings")
         settings.set("figlet_font", self.fonts[index])
+        sublime.save_settings("Preferences.sublime-settings")
+
+
+class FigletSelectCommentStyleCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        # TODO : Add an 'Automatic' mode that use the good
+        # prefix according to the langage of the document
+        self.prefixes = ['None', '#', '//', '/*']
+        self.window.show_quick_panel(self.prefixes, self.on_done)
+
+    def on_done(self, index):
+        settings = sublime.load_settings("Preferences.sublime-settings")
+        settings.set("figlet_comment_prefix", self.prefixes[index])
         sublime.save_settings("Preferences.sublime-settings")
 
 
