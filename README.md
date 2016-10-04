@@ -28,7 +28,7 @@ This Package adds three commands to the command palette:
 * `Figlet: Select Comment Style` lets you generate some comments in your code
   with slashes or hashes.
 
-
+```
     ################################################################################
     #     _   _           _                                                _       #
     #    | | | | __ _ ___| |__     ___ ___  _ __ ___  _ __ ___   ___ _ __ | |_     #
@@ -55,7 +55,7 @@ This Package adds three commands to the command palette:
     /*    |____/|_|\___/ \___|_|\_\  \___\___/|_| |_| |_|_| |_| |_|\___|_| |_|\__|___/    */
     /*                                                                                    */
     /**************************************************************************************/
-
+```
 
 Installation
 ============
