@@ -8,18 +8,30 @@ BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(BASE_PATH)
 
 
-def add_comment(text, prefix, padding):
-    reversed_prefix = prefix[::-1]
+def add_comment(text, comment_start, comment_end):
+    settings = sublime.load_settings("Preferences.sublime-settings")
+    padding = settings.get('figlet_comment_padding', 4)
+
     max_width = get_max_line_length(text)
-    horizontal_border = prefix + ((max_width + 2*padding)*prefix[-1]) + reversed_prefix
+    comment_line_char = comment_start[-1]
+    # Exception HTML
+    if comment_start == '<!--':
+        comment_line_char = '!'
+    # Exception MATLAB
+    if comment_start == '%':
+        comment_line_char = '#'
+    # Exception Pascal
+    if comment_start == '{':
+        comment_line_char = '#'
 
     # First row
+    horizontal_border = comment_start + ((max_width + 2*padding)*comment_line_char) + comment_end
     result = horizontal_border + '\n'
     # Content
-    for line in text.split('\n')[:-1]:
-        result += prefix+ padding*' ' + line + (max_width-len(line)+padding)*' ' + reversed_prefix + '\n'
+    for line in text.split('\n'):
+        result += comment_start+ padding*' ' + line + (max_width-len(line)+padding)*' ' + comment_end + '\n'
     # Last row
-    result += horizontal_border + prefix[0]
+    result += horizontal_border
 
     return result
 
@@ -28,8 +40,6 @@ def figlet_text(text):
     import pyfiglet
     settings = sublime.load_settings("Preferences.sublime-settings")
     font = settings.get('figlet_font', 'standard')
-    prefix = settings.get('figlet_comment_prefix', 'None')
-    padding = settings.get('figlet_comment_padding', 4)
 
     width = get_width()
 
@@ -38,9 +48,6 @@ def figlet_text(text):
     # Strip trailing whitespace, because why not?
     if settings.get('figlet_no_trailing_spaces', True):
         result = '\n'.join((line.rstrip() for line in result.split('\n')))
-
-    if prefix != 'None':
-        result = add_comment(result, prefix, padding)
 
     return result[:len(result) - 1]
 
@@ -74,19 +81,6 @@ class FigletSelectFontCommand(sublime_plugin.WindowCommand):
         sublime.save_settings("Preferences.sublime-settings")
 
 
-class FigletSelectCommentStyleCommand(sublime_plugin.WindowCommand):
-    def run(self):
-        # TODO : Add an 'Automatic' mode that use the good
-        # prefix according to the langage of the document
-        self.prefixes = ['None', '#', '//', '/*']
-        self.window.show_quick_panel(self.prefixes, self.on_done)
-
-    def on_done(self, index):
-        settings = sublime.load_settings("Preferences.sublime-settings")
-        settings.set("figlet_comment_prefix", self.prefixes[index])
-        sublime.save_settings("Preferences.sublime-settings")
-
-
 class FigletTextCommand(sublime_plugin.WindowCommand):
     def run(self):
         view = self.window.active_view()
@@ -102,8 +96,23 @@ class FigletTextCommand(sublime_plugin.WindowCommand):
         view.run_command('figlet_insert_text', {'text': text})
 
 
+class FigletCommentCommand(sublime_plugin.WindowCommand):
+    def run(self):
+        view = self.window.active_view()
+        sel = view.sel()
+        if len(sel) == 1 and sel[0].size() > 0:
+            view.run_command('figlet_insert_text', {'text': None, 'comment': True})
+        else:
+            self.window.show_input_panel("Text to Figletize in comment:", "",
+                                         self.on_done, None, None)
+
+    def on_done(self, text):
+        view = self.window.active_view()
+        view.run_command('figlet_insert_text', {'text': text, 'comment': True})
+
+
 class FigletInsertTextCommand(sublime_plugin.TextCommand):
-    def run(self, edit, text=None):
+    def run(self, edit, text=None, comment=False):
         view = self.view
         sel = view.sel()
 
@@ -115,6 +124,43 @@ class FigletInsertTextCommand(sublime_plugin.TextCommand):
         cursor = min(sel[0].a, sel[0].b)
 
         text = figlet_text(text)
+
+        if comment:
+            # Get comment characters
+            meta_infos = view.meta_info('shellVariables', cursor)
+            comment_start = None
+            comment_end = None
+            comment_start_2 = None
+            comment_end_2 = None
+            comment_start_3 = None
+            comment_end_3 = None
+            for meta_info in meta_infos:
+                if meta_info['name'] == 'TM_COMMENT_START':
+                    comment_start = meta_info['value']
+                if meta_info['name'] == 'TM_COMMENT_END':
+                    comment_end = meta_info['value']
+                if meta_info['name'] == 'TM_COMMENT_START_2':
+                    comment_start_2 = meta_info['value']
+                if meta_info['name'] == 'TM_COMMENT_END_2':
+                    comment_end_2 = meta_info['value']
+                if meta_info['name'] == 'TM_COMMENT_START_3':
+                    comment_start_2 = meta_info['value']
+                if meta_info['name'] == 'TM_COMMENT_END_3':
+                    comment_end_2 = meta_info['value']
+            if comment_end_2 is not None and comment_start_2 is not None:
+                comment_start = comment_start_2
+                comment_end = comment_end_2
+            if comment_end_3 is not None and comment_start_3 is not None:
+                comment_start = comment_start_3
+                comment_end = comment_end_3
+            if comment_start is None:
+                comment_start = ';' # When nothing is set (e.g. Plain text)
+            if comment_end is None:
+                comment_end = comment_start[::-1]
+            comment_start = comment_start.replace(" ", "")
+            comment_end = comment_end.replace(" ", "")
+
+            text = add_comment(text, comment_start, comment_end)
 
         view.erase(edit, sel[0])
         view.insert(edit, cursor, text)

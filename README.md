@@ -25,7 +25,7 @@ This Package adds three commands to the command palette:
   come with pyfiglet. See a list of the font styles at the [figlet font
   page](http://www.figlet.org/examples.html).
 
-* `Figlet: Select Comment Style` lets you generate some comments in your code
+* `Figlet: Add Comment` lets you generate some comments in your code
   with slashes or hashes.
 
 ```
@@ -37,15 +37,6 @@ This Package adds three commands to the command palette:
     #    |_| |_|\__,_|___/_| |_|  \___\___/|_| |_| |_|_| |_| |_|\___|_| |_|\__|    #
     #                                                                              #
     ################################################################################
-
-    //////////////////////////////////////////////////////////////////////////////
-    //     ____              _     _            _           _                   //
-    //    |  _ \  ___  _   _| |__ | | ___   ___| | __ _ ___| |__   ___  ___     //
-    //    | | | |/ _ \| | | | '_ \| |/ _ \ / __| |/ _` / __| '_ \ / _ \/ __|    //
-    //    | |_| | (_) | |_| | |_) | |  __/ \__ \ | (_| \__ \ | | |  __/\__ \    //
-    //    |____/ \___/ \__,_|_.__/|_|\___| |___/_|\__,_|___/_| |_|\___||___/    //
-    //                                                                          //
-    //////////////////////////////////////////////////////////////////////////////
 
     /**************************************************************************************/
     /*     ____  _            _                                               _           */
