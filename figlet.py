@@ -25,11 +25,14 @@ def add_comment(text, comment_start, comment_end):
         comment_line_char = '#'
 
     # First row
-    horizontal_border = comment_start + ((max_width + 2*padding)*comment_line_char) + comment_end
+    horizontal_border = comment_start + \
+        ((max_width + 2 * padding) * comment_line_char) + \
+        comment_end
     result = horizontal_border + '\n'
     # Content
     for line in text.split('\n'):
-        result += comment_start+ padding*' ' + line + (max_width-len(line)+padding)*' ' + comment_end + '\n'
+        result += comment_start + padding * ' ' + line + \
+            (max_width - len(line) + padding) * ' ' + comment_end + '\n'
     # Last row
     result += horizontal_border
 
@@ -101,7 +104,8 @@ class FigletCommentCommand(sublime_plugin.WindowCommand):
         view = self.window.active_view()
         sel = view.sel()
         if len(sel) == 1 and sel[0].size() > 0:
-            view.run_command('figlet_insert_text', {'text': None, 'comment': True})
+            view.run_command('figlet_insert_text', {'text': None,
+                                                    'comment': True})
         else:
             self.window.show_input_panel("Text to Figletize in comment:", "",
                                          self.on_done, None, None)
@@ -116,53 +120,69 @@ class FigletInsertTextCommand(sublime_plugin.TextCommand):
         view = self.view
         sel = view.sel()
 
+        text_length = 0
         if text is None:  # ... then grab selection
             if len(sel) != 1 or sel[0].size() == 0:
                 return
             text = view.substr(sel[0])
+            text_length = len(text)
 
         cursor = min(sel[0].a, sel[0].b)
 
         text = figlet_text(text)
 
         if comment:
-            # Get comment characters
-            meta_infos = view.meta_info('shellVariables', cursor)
-            comment_start = None
-            comment_end = None
-            comment_start_2 = None
-            comment_end_2 = None
-            comment_start_3 = None
-            comment_end_3 = None
-            for meta_info in meta_infos:
-                if meta_info['name'] == 'TM_COMMENT_START':
-                    comment_start = meta_info['value']
-                if meta_info['name'] == 'TM_COMMENT_END':
-                    comment_end = meta_info['value']
-                if meta_info['name'] == 'TM_COMMENT_START_2':
-                    comment_start_2 = meta_info['value']
-                if meta_info['name'] == 'TM_COMMENT_END_2':
-                    comment_end_2 = meta_info['value']
-                if meta_info['name'] == 'TM_COMMENT_START_3':
-                    comment_start_2 = meta_info['value']
-                if meta_info['name'] == 'TM_COMMENT_END_3':
-                    comment_end_2 = meta_info['value']
-            if comment_end_2 is not None and comment_start_2 is not None:
-                comment_start = comment_start_2
-                comment_end = comment_end_2
-            if comment_end_3 is not None and comment_start_3 is not None:
-                comment_start = comment_start_3
-                comment_end = comment_end_3
-            if comment_start is None:
-                comment_start = ';' # When nothing is set (e.g. Plain text)
-            if comment_end is None:
-                comment_end = comment_start[::-1]
-            comment_start = comment_start.replace(" ", "")
-            comment_end = comment_end.replace(" ", "")
-
+            comment_start, comment_end = self.getCommentPrefix()
             text = add_comment(text, comment_start, comment_end)
+
+        # Add tabulation?
+        tab = (len(view.line(cursor)) - text_length) * ' '
+        text = '\n'.join((tab + line for line in text.split('\n')))
+        text = text[len(tab):]
 
         view.erase(edit, sel[0])
         view.insert(edit, cursor, text)
         sel.clear()
         sel.add(sublime.Region(cursor, cursor + len(text)))
+
+    def getCommentPrefix(self):
+        view = self.view
+        sel = view.sel()
+        cursor = min(sel[0].a, sel[0].b)
+
+        # Get comment characters
+        meta_infos = view.meta_info('shellVariables', cursor)
+        comment_start = None
+        comment_end = None
+        comment_start_2 = None
+        comment_end_2 = None
+        comment_start_3 = None
+        comment_end_3 = None
+        for meta_info in meta_infos:
+            if meta_info['name'] == 'TM_COMMENT_START':
+                comment_start = meta_info['value']
+            if meta_info['name'] == 'TM_COMMENT_END':
+                comment_end = meta_info['value']
+            if meta_info['name'] == 'TM_COMMENT_START_2':
+                comment_start_2 = meta_info['value']
+            if meta_info['name'] == 'TM_COMMENT_END_2':
+                comment_end_2 = meta_info['value']
+            if meta_info['name'] == 'TM_COMMENT_START_3':
+                comment_start_2 = meta_info['value']
+            if meta_info['name'] == 'TM_COMMENT_END_3':
+                comment_end_2 = meta_info['value']
+        if comment_end_2 is not None and comment_start_2 is not None:
+            comment_start = comment_start_2
+            comment_end = comment_end_2
+        if comment_end_3 is not None and comment_start_3 is not None:
+            comment_start = comment_start_3
+            comment_end = comment_end_3
+        if comment_start is None:
+            # When nothing is set (e.g. Plain text)
+            comment_start = ';'
+        if comment_end is None:
+            comment_end = comment_start[::-1]
+        comment_start = comment_start.replace(" ", "")
+        comment_end = comment_end.replace(" ", "")
+
+        return comment_start, comment_end
